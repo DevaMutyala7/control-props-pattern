@@ -2,39 +2,64 @@ import { useReducer } from "react";
 
 enum ActionKind {
   click = "click",
-  select = "select"
+  select = "select",
 }
 
-type State = {
+interface State {
   open: boolean;
-};
+  selectedOption?: string;
+}
 
-type ActionType = {
+interface ActionType {
   type: ActionKind;
-  payload: string;
-};
+  payload?: string;
+}
 
 const SelectReducer = (state: State, action: ActionType) => {
   switch (action.type) {
     case ActionKind.click:
-      return { ...state, open: true };
+      return { ...state, open: !state.open };
     case ActionKind.select:
-      return { open: false, value: action.payload };
+      return { open: false, selectedOption: action.payload };
     default:
       throw new Error(`unhandled action type ${action.type}`);
   }
 };
 
-export const useSelect = (reducer = SelectReducer) => {
-  const [state, dispatch] = useReducer(reducer, { open: false, value: "" });
+export const useSelect = ({
+  value,
+  onValueChange,
+  reducer = SelectReducer,
+}: {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  reducer?: (state: State, action: ActionType) => State;
+}) => {
+  const [state, dispatch] = useReducer(reducer, { open: false });
+
+  const isValueProvided = value != null;
+  const selectedOption = isValueProvided ? value : state.selectedOption;
+
+  const dispatchWithOnChange = (action: ActionType, value: string) => {
+    if (isValueProvided) {
+      onValueChange?.(value);
+    } else {
+      dispatch(action);
+    }
+  };
 
   const setOnClick = () => {
-    dispatch({ type: ActionKind.click, payload: "" });
+    dispatch({ type: ActionKind.click });
   };
 
   const selectOption = (value: string) => {
-    dispatch({ type: ActionKind.select, payload: value });
+    dispatchWithOnChange({ type: ActionKind.select, payload: value }, value);
   };
 
-  return { open: state.open, setOnClick, selectOption };
+  return {
+    open: state.open,
+    setOnClick,
+    selectOption,
+    selectedOption,
+  };
 };
